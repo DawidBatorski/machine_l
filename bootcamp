@@ -1,0 +1,72 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import GradientBoostingClassifier
+
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score, recall_score
+
+from imblearn.metrics import specificity_score
+
+import matplotlib.pyplot as plt
+
+
+#import i edycja danych
+data = pd.read_csv('data_atlas.csv')
+
+data = data.drop(data.columns[0], axis=1)
+
+data['income'] = data['income'].str.replace('złoty', '', regex=False)
+
+data['children'] = data['children'].str.replace('dzieci','',regex=False)
+data['children'] = data['children'].replace('brak', '0')
+
+data['credit_history'] = data['credit_history'].map({'dobra historia': 1, 'brak historii': 0})
+
+data['overdue_payments'] = data['overdue_payments'].map({'brak opóźnień': 0, 'opóźnienia': 1})
+
+data = pd.get_dummies(data, columns=['employment_type','education','city','marital_status'], prefix='employment', drop_first=False)
+
+data['owns_property'] = data['owns_property'].map({'tak': 1, 'nie': 0})
+
+data['assets_value'] = data['assets_value'].str.replace('złoty', '', regex=False)
+pd.set_option('display.max_rows', 1000)
+pd.set_option('display.max_columns', None)
+data = data.dropna()
+
+
+print(data)
+
+#cechy
+X = data.drop(columns=['credit_risk'])
+#etykiety
+y = data['credit_risk']
+
+#Podział na trening/test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+#tworzymy model
+model = GradientBoostingClassifier()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+
+acc = round(accuracy_score(y_test, y_pred),2)
+recall = round(recall_score(y_test, y_pred),2)
+specifity = round(specificity_score(y_test, y_pred),2)
+
+print(f"accuracy: {acc} recall: {recall} specifity: {specifity}")
+
+r2_score = round(r2_score(y_test, y_pred),2)
+mean_squared_error = round(np.sqrt(mean_squared_error(y_test, y_pred)),2)
+mean_absolute_error = round(mean_absolute_error(y_test, y_pred),2)
+
+print(f"r2_score: {r2_score} mean_squared_error: {mean_squared_error} mean_absolute_error: {mean_absolute_error}")
+
+
+#macierz pomyłek
+cm = confusion_matrix(y_test, y_pred)
+cm_disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Negative', 'Positive'])
+cm_disp.plot(cmap=plt.cm.Blues)
+plt.show()
+
+
